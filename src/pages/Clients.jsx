@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import api from "../api/axiosConfig";
 
@@ -14,14 +14,14 @@ function Clients() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const loadClients = async () => {
+  const loadClients = useCallback(async () => {
     try {
       const response = await api.get("/clients");
       setClients(response.data);
-    } catch (error) {
+    } catch {
       setError(t("clients.loadError"));
     }
-  };
+  }, [t]);
 
   const handleChange = (event) => {
     setForm({
@@ -76,14 +76,18 @@ function Clients() {
       await api.delete(`/clients/${id}`);
       setMessage(t("clients.deletedSuccess"));
       loadClients();
-    } catch (error) {
+    } catch {
       setError(t("clients.deleteError"));
     }
   };
 
   useEffect(() => {
-    loadClients();
-  }, []);
+    const initialize = async () => {
+      await loadClients();
+    };
+
+    initialize();
+  }, [loadClients]);
 
   return (
     <div>

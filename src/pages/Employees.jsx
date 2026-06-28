@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import api from "../api/axiosConfig";
 
@@ -23,12 +23,12 @@ function Employees() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const loadClients = async () => {
+  const loadClients = useCallback(async () => {
     const response = await api.get("/clients");
     setClients(response.data);
-  };
+  }, []);
 
-  const fetchLocationName = async (latitude, longitude) => {
+  const fetchLocationName = useCallback(async (latitude, longitude) => {
     const key = `${latitude},${longitude}`;
     if (locationCacheRef.current[key]) {
       return locationCacheRef.current[key];
@@ -57,14 +57,14 @@ function Employees() {
       const locationName = placeName || t("common.none");
       locationCacheRef.current[key] = locationName;
       return locationName;
-    } catch (error) {
+    } catch {
       return t("common.none");
     } finally {
       setLocationLoading((prev) => ({ ...prev, [key]: false }));
     }
-  };
+  }, [i18n.language, t]);
 
-  const resolveLocationNames = async (employeeList) => {
+  const resolveLocationNames = useCallback(async (employeeList) => {
     const names = {};
 
     await Promise.all(
@@ -81,9 +81,9 @@ function Employees() {
     );
 
     setLocationNames((prev) => ({ ...prev, ...names }));
-  };
+  }, [fetchLocationName]);
 
-  const loadEmployees = async () => {
+  const loadEmployees = useCallback(async () => {
     try {
       const url = filterClientId
         ? `/employees?clientId=${filterClientId}`
@@ -92,18 +92,18 @@ function Employees() {
       const response = await api.get(url);
       setEmployees(response.data);
       resolveLocationNames(response.data);
-    } catch (error) {
+    } catch {
       setError(t("employees.loadError"));
     }
-  };
+  }, [filterClientId, resolveLocationNames, t]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       await Promise.all([loadClients(), loadEmployees()]);
-    } catch (error) {
+    } catch {
       setError(t("employees.loadError"));
     }
-  };
+  }, [loadClients, loadEmployees, t]);
 
   const handleChange = (event) => {
     setForm({
@@ -169,7 +169,7 @@ function Employees() {
       await api.delete(`/employees/${id}`);
       setMessage(t("employees.deletedSuccess"));
       loadEmployees();
-    } catch (error) {
+    } catch {
       setError(t("employees.deleteError"));
     }
   };
@@ -179,7 +179,7 @@ function Employees() {
       await api.put(`/employees/${id}/status`, { status });
       setMessage(t("employees.statusUpdated"));
       loadEmployees();
-    } catch (error) {
+    } catch {
       setError(t("employees.statusError"));
     }
   };
@@ -200,7 +200,7 @@ function Employees() {
 
           setMessage(t("employees.locationUpdated"));
           loadEmployees();
-        } catch (error) {
+        } catch {
           setError(t("employees.locationError"));
         }
       },
@@ -211,12 +211,20 @@ function Employees() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    const initialize = async () => {
+      await loadData();
+    };
+
+    initialize();
+  }, [loadData]);
 
   useEffect(() => {
-    loadEmployees();
-  }, [filterClientId]);
+    const initialize = async () => {
+      await loadEmployees();
+    };
+
+    initialize();
+  }, [loadEmployees]);
 
   return (
     <div>

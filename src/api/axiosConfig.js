@@ -51,7 +51,7 @@ api.interceptors.response.use(
   },
   (error) => {
     let errorMessage = "An error occurred";
-    let errorData = {};
+    let errorData;
 
     if (error.response) {
       // Server responded with error status

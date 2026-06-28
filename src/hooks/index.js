@@ -2,8 +2,8 @@
  * Custom React Hooks
  */
 
-import { useEffect, useState, useCallback } from 'react';
-import { useLoading } from '../context/LoadingContext';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useLoading } from '../context/loading-context-helper';
 import api from '../api/axiosConfig';
 
 /**
@@ -37,8 +37,12 @@ export const useFetch = (url, options = {}) => {
   }, [url, options, startLoading, stopLoading]);
 
   useEffect(() => {
-    fetchData();
-  }, [url]);
+    const fetchDataOnMount = async () => {
+      await fetchData();
+    };
+
+    fetchDataOnMount();
+  }, [fetchData]);
 
   return { data, loading, error, refetch: fetchData };
 };
@@ -99,14 +103,16 @@ export const useLocalStorage = (key, initialValue) => {
   const setValue = useCallback(
     (value) => {
       try {
-        const valueToStore = value instanceof Function ? value(storedValue) : value;
-        setStoredValue(valueToStore);
-        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+        setStoredValue((prevValue) => {
+          const valueToStore = value instanceof Function ? value(prevValue) : value;
+          window.localStorage.setItem(key, JSON.stringify(valueToStore));
+          return valueToStore;
+        });
       } catch (error) {
         console.error(error);
       }
     },
-    [key, storedValue]
+    [key]
   );
 
   return [storedValue, setValue];
@@ -139,17 +145,31 @@ export const useDebounce = (value, delay = 500) => {
  * @returns {function} - Throttled function
  */
 export const useThrottle = (callback, delay = 500) => {
-  const [canCall, setCanCall] = useState(true);
+  const isReadyRef = useRef(true);
+  const timeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   return useCallback(
     (...args) => {
-      if (canCall) {
-        callback(...args);
-        setCanCall(false);
-        setTimeout(() => setCanCall(true), delay);
+      if (!isReadyRef.current) {
+        return;
       }
+
+      callback(...args);
+      isReadyRef.current = false;
+
+      timeoutRef.current = setTimeout(() => {
+        isReadyRef.current = true;
+      }, delay);
     },
-    [callback, delay, canCall]
+    [callback, delay]
   );
 };
 
@@ -182,9 +202,15 @@ export const useAsync = (asyncFunction, immediate = true) => {
   }, [asyncFunction]);
 
   useEffect(() => {
-    if (immediate) {
-      execute();
+    if (!immediate) {
+      return;
     }
+
+    const runAsync = async () => {
+      await execute();
+    };
+
+    runAsync();
   }, [execute, immediate]);
 
   return { data, loading: status === 'pending', error, execute };
@@ -196,13 +222,13 @@ export const useAsync = (asyncFunction, immediate = true) => {
  * @returns {*} - Previous value
  */
 export const usePrevious = (value) => {
-  const ref = useState(null)[1];
-  const [prev, setPrev] = useState(null);
+  const ref = useRef();
+  const [previous, setPrevious] = useState();
 
   useEffect(() => {
-    setPrev(ref.current);
+    setPrevious(ref.current);
     ref.current = value;
   }, [value]);
 
-  return prev;
+  return previous;
 };

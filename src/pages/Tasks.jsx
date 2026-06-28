@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import api from "../api/axiosConfig";
 
@@ -25,17 +25,17 @@ function Tasks() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const loadClients = async () => {
+  const loadClients = useCallback(async () => {
     const response = await api.get("/clients");
     setClients(response.data);
-  };
+  }, []);
 
-  const loadEmployees = async () => {
+  const loadEmployees = useCallback(async () => {
     const response = await api.get("/employees");
     setEmployees(response.data);
-  };
+  }, []);
 
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (filterStatus) params.append("status", filterStatus);
@@ -44,18 +44,10 @@ function Tasks() {
       const url = params.toString() ? `/tasks?${params.toString()}` : "/tasks";
       const response = await api.get(url);
       setTasks(response.data);
-    } catch (error) {
+    } catch {
       setError(t("tasks.loadError"));
     }
-  };
-
-  const loadData = async () => {
-    try {
-      await Promise.all([loadClients(), loadEmployees(), loadTasks()]);
-    } catch (error) {
-      setError(t("tasks.loadError"));
-    }
-  };
+  }, [filterStatus, filterPriority, t]);
 
   const handleChange = (event) => {
     setForm({
@@ -134,7 +126,7 @@ function Tasks() {
       await api.delete(`/tasks/${id}`);
       setMessage(t("tasks.deletedSuccess"));
       loadTasks();
-    } catch (error) {
+    } catch {
       setError(t("tasks.deleteError"));
     }
   };
@@ -145,30 +137,38 @@ function Tasks() {
       setMessage(t("tasks.statusUpdated"));
       loadTasks();
       loadEmployees();
-    } catch (error) {
+    } catch {
       setError(t("tasks.statusError"));
     }
   };
 
   useEffect(() => {
-    const saved = localStorage.getItem("tasksFilters");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setFilterStatus(parsed.status || "");
-        setFilterPriority(parsed.priority || "");
-      } catch (err) {
-        console.warn("Failed to parse saved task filters", err);
+    const initialize = async () => {
+      const saved = localStorage.getItem("tasksFilters");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setFilterStatus(parsed.status || "");
+          setFilterPriority(parsed.priority || "");
+        } catch (err) {
+          console.warn("Failed to parse saved task filters", err);
+        }
       }
-    }
 
-    loadClients();
-    loadEmployees();
-  }, []);
+      await loadClients();
+      await loadEmployees();
+    };
+
+    initialize();
+  }, [loadClients, loadEmployees]);
 
   useEffect(() => {
-    loadTasks();
-  }, [filterStatus, filterPriority]);
+    const initialize = async () => {
+      await loadTasks();
+    };
+
+    initialize();
+  }, [loadTasks]);
 
   useEffect(() => {
     localStorage.setItem(

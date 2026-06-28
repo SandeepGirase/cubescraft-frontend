@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import api from "../api/axiosConfig";
 
@@ -10,7 +10,7 @@ function Tracking() {
   const [locationLoading, setLocationLoading] = useState({});
   const locationCacheRef = useRef({});
 
-  const fetchLocationName = async (latitude, longitude) => {
+  const fetchLocationName = useCallback(async (latitude, longitude) => {
     const key = `${latitude},${longitude}`;
     if (locationCacheRef.current[key]) {
       return locationCacheRef.current[key];
@@ -39,14 +39,14 @@ function Tracking() {
       const locationName = placeName || t("common.none");
       locationCacheRef.current[key] = locationName;
       return locationName;
-    } catch (error) {
+    } catch {
       return t("common.none");
     } finally {
       setLocationLoading((prev) => ({ ...prev, [key]: false }));
     }
-  };
+  }, [i18n.language, t]);
 
-  const resolveLocationNames = async (employeeList) => {
+  const resolveLocationNames = useCallback(async (employeeList) => {
     const names = {};
 
     await Promise.all(
@@ -63,21 +63,25 @@ function Tracking() {
     );
 
     setLocationNames((prev) => ({ ...prev, ...names }));
-  };
+  }, [fetchLocationName]);
 
-  const loadEmployees = async () => {
+  const loadEmployees = useCallback(async () => {
     try {
       const response = await api.get("/employees");
       setEmployees(response.data);
       resolveLocationNames(response.data);
-    } catch (error) {
+    } catch {
       setError(t("tracking.loadError"));
     }
-  };
+  }, [resolveLocationNames, t]);
 
   useEffect(() => {
-    loadEmployees();
-  }, []);
+    const initialize = async () => {
+      await loadEmployees();
+    };
+
+    initialize();
+  }, [loadEmployees]);
 
   return (
     <div>

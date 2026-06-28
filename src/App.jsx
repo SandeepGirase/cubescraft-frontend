@@ -1,29 +1,37 @@
+import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
-import LoadingProvider from "./context/LoadingContext";
-import Dashboard from "./pages/Dashboard";
-import Clients from "./pages/Clients";
-import Employees from "./pages/Employees";
-import Tasks from "./pages/Tasks";
-import Tracking from "./pages/Tracking";
+import LoadingProvider from "./context/LoadingContext.jsx";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Clients = lazy(() => import("./pages/Clients"));
+const Employees = lazy(() => import("./pages/Employees"));
+const Tasks = lazy(() => import("./pages/Tasks"));
+const Tracking = lazy(() => import("./pages/Tracking"));
 
 function App() {
   return (
     <LoadingProvider>
       <BrowserRouter>
         <Layout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/employees" element={<Employees />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/tracking" element={<Tracking />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<LoadingFallback />}>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/clients" element={<Clients />} />
+              <Route path="/employees" element={<Employees />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/tracking" element={<Tracking />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </Layout>
       </BrowserRouter>
     </LoadingProvider>
   );
+}
+
+function LoadingFallback() {
+  return <div className="loading-fallback">Loading application...</div>;
 }
 
 function NotFound() {

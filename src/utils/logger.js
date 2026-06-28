@@ -51,10 +51,12 @@ class Logger {
 
   _sendToMonitoring(message, data) {
     // Implement monitoring service integration (e.g., Sentry, LogRocket)
+    const payload = { message, data };
+    void payload;
     try {
       // Example: Send to monitoring service
-      // await fetch('/api/logs', { method: 'POST', body: JSON.stringify({ message, data }) });
-    } catch (error) {
+      // await fetch('/api/logs', { method: 'POST', body: JSON.stringify(payload) });
+    } catch {
       // Silently fail to avoid error loops
     }
   }

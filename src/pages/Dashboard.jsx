@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import api from "../api/axiosConfig";
 
@@ -16,7 +16,7 @@ function Dashboard() {
   const [recentTasks, setRecentTasks] = useState([]);
   const [error, setError] = useState("");
 
-  const loadDashboard = async () => {
+  const loadDashboard = useCallback(async () => {
     try {
       const [clientsResponse, employeesResponse, tasksResponse] =
         await Promise.all([
@@ -41,14 +41,18 @@ function Dashboard() {
       });
 
       setRecentTasks(tasks.slice(-5).reverse());
-    } catch (error) {
+    } catch {
       setError(t("dashboard.loadError"));
     }
-  };
+  }, [t]);
 
   useEffect(() => {
-    loadDashboard();
-  }, []);
+    const initialize = async () => {
+      await loadDashboard();
+    };
+
+    initialize();
+  }, [loadDashboard]);
 
   return (
     <div>

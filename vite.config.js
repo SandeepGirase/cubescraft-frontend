@@ -21,17 +21,27 @@ export default defineConfig({
     // Optimize chunks for better caching
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-i18n': ['i18next', 'react-i18next'],
-          'vendor-axios': ['axios'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor-react';
+            }
+            if (id.includes('i18next') || id.includes('react-i18next')) {
+              return 'vendor-i18n';
+            }
+            if (id.includes('axios')) {
+              return 'vendor-axios';
+            }
+          }
         },
         // Optimize asset file names for better caching
         entryFileNames: 'js/[name]-[hash].js',
         chunkFileNames: 'js/[name]-[hash].js',
         assetFileNames: (assetInfo) => {
-          const info = assetInfo.name.split('.');
-          const ext = info[info.length - 1];
+          const fileName = assetInfo.name || '';
+          const info = fileName.split('.');
+          const ext = info.length > 1 ? info[info.length - 1] : '';
+
           if (/png|jpe?g|gif|svg/.test(ext)) {
             return `images/[name]-[hash][extname]`;
           } else if (/woff|woff2|eot|ttf|otf/.test(ext)) {
@@ -39,7 +49,8 @@ export default defineConfig({
           } else if (ext === 'css') {
             return `css/[name]-[hash][extname]`;
           }
-          return `[name]-[hash][extname]`;
+
+          return `assets/[name]-[hash][extname]`;
         },
       },
     },
